@@ -1,2 +1,2 @@
-# BlueSTARR_Variant_Motif_Analysis
+# BlueSTARR Variant Motif Analysis
 Motif perturbation and enrichment analysis for BlueSTARR-identified regulatory variants.

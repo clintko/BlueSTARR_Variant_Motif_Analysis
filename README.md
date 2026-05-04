@@ -12,7 +12,7 @@ This repository contains input variant sets, scripts, and documentation for moti
 
 ## Main input data
 
-## Anaalysis workflow
+## Analysis workflow
 
 1. Prepare BlueSTARR variant input sets
 2. Prepare motif files

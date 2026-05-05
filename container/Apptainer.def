@@ -1,0 +1,283 @@
+BootStrap: docker
+From: jupyter/scipy-notebook:ubuntu-22.04
+
+%environment
+    export PATH="$PATH:/usr/games"
+
+    # Fix SSL errors (SSLCertVerificationError) in python
+    # Tell Conda-Python/requests/urllib to use the OS CA bundle
+    # after installing ca-certificates via apt install
+    export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+
+%post    
+    ### ===========================================
+    ### install Linux packages
+    ### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    export DEBIAN_FRONTEND=noninteractive
+
+    ### Package for checking containers environment
+    apt-get update && apt-get install -yq fortune cowsay lolcat
+
+    ### Common tools
+    apt-get install -yq --no-install-recommends apt-utils
+    apt-get install -yq --no-install-recommends libcurl4-openssl-dev libxml2-dev libssl-dev
+    apt-get install -yq --no-install-recommends build-essential
+    
+    ### ===========================================
+    ### install python packages
+    ### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    ### Sanity check: confirm pip/python current version
+    python --version
+    which python
+    pip --version
+
+    ### Update pip
+    pip install --no-cache-dir --upgrade pip  
+    pip --version
+    
+    ### Python testing toolkits
+    pip install --no-cache-dir pytest
+
+    ### ML tools
+    pip install --no-cache-dir xgboost
+    pip install --no-cache-dir catboost
+
+    ### ML tools
+    pip install --no-cache-dir umap-learn
+    pip install --no-cache-dir igraph
+    pip install --no-cache-dir leidenalg
+    pip install --no-cache-dir PhenoGraph
+
+    ### Bio tools: base
+    pip install --no-cache-dir biopython
+    pip install --no-cache-dir pyBigWig
+    pip install --no-cache-dir igv-notebook
+    #pip install --no-cache-dir hic-straw
+    #pip install --no-cache-dir juicebox-notebook
+    
+    ### Bio tools: sequence
+    apt-get update && apt-get install -yq --no-install-recommends zlib1g-dev
+    pip install --no-cache-dir pysam
+    pip install --no-cache-dir pyfaidx
+    pip install --no-cache-dir py2bit
+    pip install --no-cache-dir dinuc-shuf
+    pip install --no-cache-dir logomaker
+
+    ### ===========================================
+    ### Setup Alphagenome client
+    ### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    
+    ### system deps for zstandard, protobuf tool
+    #apt-get update && apt-get install -y --no-install-recommends \
+    #    libzstd-dev \
+    #    protobuf-compiler
+
+    ### pip install alphagenome client
+    #pip install --no-cache-dir alphagenome
+
+    ### ===========================================
+    ### install R 4.x
+    ### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    ### install two helper packages we need
+    apt-get update && apt-get install -yq --no-install-recommends software-properties-common dirmngr
+
+    ### add the signing key (by Michael Rutter) for these repos
+    ### To verify key, run gpg --show-keys /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc 
+    ### Fingerprint: E298A3A825C0D65DFD57CBB651716619E084DAB9
+    #wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc
+    wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc
+    
+    ### add the R 4.0 repo from CRAN -- adjust 'focal' to 'groovy' or 'bionic' as needed
+    add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
+    
+    ### install R and its dependencies.
+    apt-get update && apt-get install -yq --no-install-recommends r-base r-base-dev
+
+    ### ===========================================
+    ### install R packages
+    ### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    
+    ### Tools needed for compiling many CRAN packages
+    apt-get install -yq --no-install-recommends \
+        gfortran \
+        pkg-config \
+        make \
+        cmake \
+        git \
+        wget \
+        ca-certificates
+    
+    ### Common R package system deps
+    apt-get install -yq --no-install-recommends \
+        zlib1g-dev \
+        libbz2-dev \
+        liblzma-dev \
+        libpcre2-dev \
+        libicu-dev \
+        libxml2-dev
+
+    ### Often needed by text/plot packages (ragg, systemfonts, textshaping, etc.)
+    apt-get install -yq --no-install-recommends \
+        libfontconfig1-dev \
+        libfreetype6-dev \
+        libpng-dev \
+        libtiff5-dev \
+        libjpeg-dev \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        libcairo2-dev \
+        libglib2.0-dev \
+        libwebp-dev
+    
+    ### Solve errors for ggpubr / lme4 / nloptr stack
+    ### + Rscript -e "install.packages('ggpubr')"
+    ###     ERROR: configuration failed for package ‘nloptr’
+    ###     ERROR: dependency ‘nloptr’ is not available for package ‘lme4’
+    ###     ERROR: dependency ‘lme4’ is not available for package ‘pbkrtest’
+    ###     ERROR: dependencies ‘pbkrtest’, ‘lme4’ are not available for package ‘car’
+    ###     ERROR: dependency ‘car’ is not available for package ‘rstatix’
+    ###     ERROR: dependency ‘rstatix’ is not available for package ‘ggpubr’
+    apt-get install -yq libnlopt-dev
+
+    ### -------------------------------------------
+
+    Rscript -e "install.packages('tidyverse', quiet=FALSE)"
+    Rscript -e "stopifnot(requireNamespace('tidyverse', quietly=TRUE))"
+    Rscript -e "install.packages('plyr', quiet=TRUE)"
+    Rscript -e "stopifnot(requireNamespace('plyr', quietly=TRUE))"
+    
+    ### -------------------------------------------
+    
+    ### utilities
+    Rscript -e "install.packages('simpleCache', quiet = TRUE)"
+    Rscript -e "install.packages('optparse',    quiet = TRUE)"
+    Rscript -e "install.packages('R.utils',     quiet = TRUE)"
+    Rscript -e "install.packages('pak',         quiet = TRUE)"
+
+    ### -------------------------------------------
+
+    ### tools for plotting extensions
+    Rscript -e "install.packages('gridExtra', quiet = TRUE)"
+    Rscript -e "install.packages('cowplot',   quiet = TRUE)"
+    Rscript -e "install.packages('hexbin',    quiet = TRUE)"
+    Rscript -e "install.packages('ggtext',    quiet = TRUE)"
+    Rscript -e "install.packages('ggpubr',    quiet = TRUE)"
+    Rscript -e "install.packages('ggdendro',  quiet = TRUE)"
+    Rscript -e "install.packages('GGally',    quiet = TRUE)"
+    Rscript -e "install.packages('see',       quiet = TRUE)"
+    Rscript -e "install.packages('patchwork', quiet = TRUE)"
+    Rscript -e "install.packages('cobalt',    quiet = TRUE)"
+
+    Rscript -e "pak::pkg_install('erocoar/ggpol')"
+    Rscript -e "pak::pkg_install('erocoar/gghalves')"
+    Rscript -e "stopifnot(requireNamespace('ggpol',    quietly=TRUE))"
+    Rscript -e "stopifnot(requireNamespace('gghalves', quietly=TRUE))"
+    
+    ### tools for plotting different types of figures
+    Rscript -e "install.packages('ggseqlogo', quiet = TRUE)"
+    Rscript -e "install.packages('pheatmap',  quiet = TRUE)"
+    Rscript -e "install.packages('UpSetR',    quiet = TRUE)"
+    Rscript -e "install.packages('plotly',    quiet = TRUE)"
+    
+    ### common used tools
+    Rscript -e "install.packages('ks',          quiet = TRUE)"
+    Rscript -e "install.packages('boot',        quiet = TRUE)"
+    Rscript -e "install.packages('coin',        quiet = TRUE)"
+    Rscript -e "install.packages('zoo',         quiet = TRUE)"
+    Rscript -e "install.packages('psych',       quiet = TRUE)"
+    Rscript -e "install.packages('corrr',       quiet = TRUE)"
+    Rscript -e "install.packages('kableExtra',  quiet = FALSE)"
+    Rscript -e "stopifnot(requireNamespace('kableExtra', quietly=TRUE))"
+
+    ### tools for multivariate data analysis
+    Rscript -e "install.packages('fastcluster', quiet = TRUE)"
+    Rscript -e "install.packages('FactoMineR',  quiet = TRUE)"
+    Rscript -e "install.packages('factoextra',  quiet = TRUE)"
+
+    ### tools for graph analysis
+    apt-get install -yq libopenblas-dev libglpk-dev libxml2-dev # Prerequist for igraph
+    Rscript -e "install.packages('igraph',    quiet = TRUE)"
+    Rscript -e "install.packages('tidygraph', quiet = TRUE)"
+    Rscript -e "install.packages('ggraph',    quiet = TRUE)"
+
+    ### tools for umap
+    Rscript -e "install.packages(c('RcppAnnoy','RcppHNSW','rnndescent'), quiet = TRUE)"
+    Rscript -e "install.packages('uwot', quiet = TRUE)"
+    
+    ### tools for ML
+    Rscript -e "install.packages('Matrix', quiet=TRUE)"
+    Rscript -e "install.packages('xgboost', quiet=FALSE)"
+    Rscript -e "install.packages('SHAPforxgboost', quiet=FALSE)"
+    Rscript -e "stopifnot(requireNamespace('xgboost', quietly=TRUE))"
+    Rscript -e "stopifnot(requireNamespace('SHAPforxgboost', quietly=TRUE))"
+    Rscript -e "stopifnot(requireNamespace('Matrix', quietly=TRUE))"
+
+    ### ===========================================
+    ### install R Bioconductor
+    ### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    ### Fix errors for updating packages: systemfonts, textshaping, ragg
+    apt-get update && apt-get install -yq --no-install-recommends \
+        libfontconfig1-dev \
+        libfreetype6-dev \
+        libpng-dev \
+        libtiff5-dev \
+        libjpeg-dev \
+        libharfbuzz-dev \
+        libfribidi-dev
+
+    ### install bioconductor packages
+    ### https://github.com/Bioconductor/bioconductor_docker/tree/devel/bioc_scripts
+    Rscript -e "install.packages('BiocManager', quiet=TRUE)"
+    Rscript -e "BiocManager::install(ask=FALSE, update=FALSE)"
+
+    ### ===========================================
+    ### install R Bioconductor packages
+    ### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    ### Genomic track/range analysis
+    Rscript -e "BiocManager::install('IRanges',       quiet = TRUE)"
+    Rscript -e "BiocManager::install('GenomicRanges', quiet = TRUE)"
+    Rscript -e "BiocManager::install('rtracklayer',   quiet = TRUE)"
+    
+    ### Data sources and annotation tools
+    Rscript -e "BiocManager::install('AnnotationHub',            quiet = TRUE)"
+    Rscript -e "BiocManager::install('ExperimentHub',            quiet = TRUE)"
+    Rscript -e "BiocManager::install('GenomicDistributions',     quiet = TRUE)"
+    Rscript -e "BiocManager::install('GenomicDistributionsData', quiet = TRUE)"
+
+    ### install motif related packages
+    Rscript -e "BiocManager::install('universalmotif', quiet = TRUE)"
+    
+    ### install complexheatmap
+    ### Note: ComplexHeatmap requires pacakge IRanges
+    Rscript -e "BiocManager::install('ComplexHeatmap', quiet=TRUE)"
+
+    ### =========================================== 
+    ### Install Jupyter and Set Jupyter kernels
+    ### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    
+    ### upgrade jupyterlab
+    pip install --upgrade jupyterlab
+
+    ### set bash kernel in jupyter
+    pip install bash_kernel
+    python -m bash_kernel.install
+    
+    ### set R kernel in jupyter
+    apt-get update && apt-get install -yq libzmq3-dev
+    Rscript -e "install.packages('IRkernel')"
+    Rscript -e "IRkernel::installspec(name='ir', displayname='R', user=FALSE)"
+
+    ### rebuild jupyter lab
+    jupyter lab clean
+
+    ### ===========================================
+    ### Other
+    ### ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    
+    ### Clean up to reduce image size
+    apt-get autoremove -y
+    apt-get clean && rm -rf /var/lib/apt/lists/*
